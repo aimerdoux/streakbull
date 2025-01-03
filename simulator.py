@@ -110,7 +110,7 @@ def main():
     st.set_page_config(page_title="StreakBull Investment Simulator", layout="wide")
     
     # Display StreakBull logo
-    st.image("path_to_bull_logo.png", width=200)  # Update with actual logo path
+    st.image("https://github.com/aimerdoux/streakbull/blob/main/Logo%20(1).png", width=200)  # Update with actual logo path
     
     st.title("Simulador de Inversión StreakBull")
     st.markdown("""
