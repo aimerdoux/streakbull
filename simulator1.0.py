@@ -89,3 +89,161 @@ def calculate_investment_scenarios(initial_capital, periodic_savings, periods, l
         'fees': fees,
         'returns': final_returns
     }
+
+def export_to_excel(results):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    
+    # Create DataFrame with results
+    df = pd.DataFrame({
+        'Fecha': results['dates'],
+        'Depósitos Acumulados': results['savings'],
+        'Escenario Pesimista': results['pessimistic'],
+        'Escenario Moderado': results['moderate'],
+        'Escenario Optimista': results['optimistic']
+    })
+    
+    df.to_excel(writer, sheet_name='Simulación', index=False)
+    writer.close()
+    
+    return output.getvalue()
+
+def main():
+    st.set_page_config(page_title="StreakBull Investment Simulator", layout="wide")
+    
+    # Display StreakBull logo
+    st.image("https://github.com/aimerdoux/streakbull/blob/main/Logo%20(1).png", width=200)
+    
+    st.title("Simulador de Inversión StreakBull")
+    st.markdown("""
+    Este simulador te permite visualizar diferentes escenarios de inversión basados en:
+    - Escenario Pesimista (1X QQQ 2024: 18.57% Anual)
+    - Escenario Moderado (1X StreakBull 2024: 29.50% Anual)
+    - Escenario Optimista (2X StreakBull 2024: 59.00% Anual)
+    """)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        initial_capital = st.number_input(
+            "Capital Inicial (USD)", 
+            min_value=1000,
+            value=5000,
+            step=1000
+        )
+        
+        savings_frequency = st.selectbox(
+            "Frecuencia de Ahorro",
+            options=['Semanal', 'Mensual', 'Trimestral']
+        )
+        
+        periodic_savings = st.number_input(
+            f"Ahorro {savings_frequency} (USD)",
+            min_value=0,
+            value=100,
+            step=50
+        )
+    
+    with col2:
+        if savings_frequency == 'Semanal':
+            periods = st.slider("Semanas de Simulación", 10, 260, 52)
+        elif savings_frequency == 'Mensual':
+            periods = st.slider("Meses de Simulación", 3, 60, 12)
+        else:
+            periods = st.slider("Trimestres de Simulación", 1, 20, 4)
+        
+        lock_period = st.radio(
+            "Período de Bloqueo",
+            options=[6, 12],
+            format_func=lambda x: f"{x} meses"
+        )
+    
+    # Calculate scenarios
+    results = calculate_investment_scenarios(
+        initial_capital,
+        periodic_savings,
+        periods,
+        lock_period,
+        savings_frequency
+    )
+    
+    # Create plot
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=results['dates'],
+        y=results['savings'],
+        name="Depósitos acumulados",
+        line=dict(dash='dash', color='blue')
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=results['dates'],
+        y=results['pessimistic'],
+        name="Escenario Pesimista",
+        line=dict(color='red')
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=results['dates'],
+        y=results['moderate'],
+        name="Escenario Moderado",
+        line=dict(color='orange')
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=results['dates'],
+        y=results['optimistic'],
+        name="Escenario Optimista",
+        line=dict(color='green')
+    ))
+    
+    fig.update_layout(
+        title="Simulación de Flujos: Depósitos vs. Inversión",
+        xaxis_title="Fecha",
+        yaxis_title="Valor Acumulado (USD)",
+        hovermode='x unified',
+        height=600
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Display summary statistics and fees
+    st.subheader("Resumen de Inversión")
+    
+    final_values = pd.DataFrame({
+        'Escenario': ['Depósitos', 'Pesimista', 'Moderado', 'Optimista'],
+        'Valor Final': [
+            results['savings'][-1],
+            results['pessimistic'][-1],
+            results['moderate'][-1],
+            results['optimistic'][-1]
+        ],
+        'Retorno (%)': [
+            0,
+            results['returns']['pessimistic'],
+            results['returns']['moderate'],
+            results['returns']['optimistic']
+        ],
+        'Comisión de Performance': [
+            '0%',
+            f"{results['fees']['pessimistic']*100}%",
+            f"{results['fees']['moderate']*100}%",
+            f"{results['fees']['optimistic']*100}%"
+        ]
+    })
+    
+    final_values['Valor Final'] = final_values['Valor Final'].map('${:,.2f}'.format)
+    final_values['Retorno (%)'] = final_values['Retorno (%)'].map('{:.2f}%'.format)
+    
+    st.table(final_values)
+    
+    # Export results button
+    if st.button('Exportar Resultados'):
+        excel_data = export_to_excel(results)
+        b64 = base64.b64encode(excel_data).decode()
+        href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="simulacion_streakbull.xlsx">Descargar Excel</a>'
+        st.markdown(href, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
