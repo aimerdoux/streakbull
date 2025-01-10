@@ -6,6 +6,26 @@ from datetime import datetime, timedelta
 import base64
 from io import BytesIO
 
+def export_to_excel(results):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    
+    df = pd.DataFrame({
+        'Fecha': results['dates'],
+        'Depósitos Acumulados': results['savings'],
+        'Escenario Pesimista': results['pessimistic'],
+        'Escenario Moderado': results['moderate'],
+        'Escenario Optimista': results['optimistic'],
+        'Drawdown Pesimista (%)': results['drawdown_pess'],
+        'Drawdown Moderado (%)': results['drawdown_mod'],
+        'Drawdown Optimista (%)': results['drawdown_opt']
+    })
+    
+    df.to_excel(writer, sheet_name='Simulación', index=False)
+    writer.close()
+    
+    return output.getvalue()
+
 def calculate_performance_fee(return_pct, lock_period):
     """Calculate performance fee based on return range and lock period"""
     if lock_period == 6:
@@ -61,7 +81,7 @@ def calculate_investment_scenarios(initial_capital, periodic_savings, periods, l
     # Weekly rates (based on historical performance)
     pessimistic_weekly = (1 + 0.1857) ** (1/52) - 1  # QQQ baseline
     moderate_weekly = (1 + 0.2950) ** (1/52) - 1     # StreakBull baseline
-    optimistic_weekly = (1 + 0.6100) ** (1/52) - 1   # Enhanced StreakBull
+    optimistic_weekly = (1 + 0.6500) ** (1/52) - 1   # Enhanced StreakBull (updated to 65%)
     
     # Calculate returns
     for week in range(1, weeks):
@@ -248,6 +268,18 @@ def main():
         line=dict(color='green')
     ))
     
+    # Add historical max drawdown line
+    max_value = max(max(results['pessimistic']), max(results['moderate']), max(results['optimistic']))
+    drawdown_line = [-15.1] * len(results['dates'])  # Historical max drawdown
+    
+    fig.add_trace(go.Scatter(
+        x=results['dates'],
+        y=drawdown_line,
+        name="Máximo Drawdown Histórico (-15.1%)",
+        line=dict(color='red', dash='dash'),
+        visible=show_drawdown
+    ))
+    
     if show_drawdown:
         fig.add_trace(go.Scatter(
             x=results['dates'],
@@ -323,6 +355,13 @@ def main():
         'StreakBull MS': ['+0.68%', '+0.92%', '-0.2%', '-0.12%', '-1.50%', '-2.8%']
     }
     st.table(pd.DataFrame(crisis_data))
+    
+    # Export results button
+    if st.button('Exportar Resultados'):
+        excel_data = export_to_excel(results)
+        b64 = base64.b64encode(excel_data).decode()
+        href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="simulacion_streakbull.xlsx">Descargar Excel</a>'
+        st.markdown(href, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
