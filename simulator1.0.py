@@ -61,7 +61,7 @@ def calculate_investment_scenarios(initial_capital, periodic_savings, periods, l
     # Weekly rates (based on historical performance)
     pessimistic_weekly = (1 + 0.1857) ** (1/52) - 1  # QQQ baseline
     moderate_weekly = (1 + 0.2950) ** (1/52) - 1     # StreakBull baseline
-    optimistic_weekly = (1 + 0.5900) ** (1/52) - 1   # Enhanced StreakBull
+    optimistic_weekly = (1 + 0.6100) ** (1/52) - 1   # Enhanced StreakBull
     
     # Calculate returns
     for week in range(1, weeks):
