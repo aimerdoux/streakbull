@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from io import StringIO
 
 # Key parameters
@@ -25,9 +25,26 @@ def simulate_investment_data():
     return simulated_data
 
 def plot_investment_charts(data):
-    # Create the charts using Matplotlib or other visualization libraries
-    # ...
-    st.pyplot(fig)
+    # Total Investment Over Time
+    total_investment_fig = go.Figure()
+    total_investment_fig.add_trace(go.Scatter(x=data["day"], y=data["totalInvestment"], mode="lines", name="Total Investment"))
+    total_investment_fig.update_layout(title="Total Investment Over Time", xaxis_title="Day", yaxis_title="Investment")
+
+    # Active Investors Over Time
+    active_investors_fig = go.Figure()
+    active_investors_fig.add_trace(go.Scatter(x=data["day"], y=data["numInvestors"], mode="lines", name="Active Investors"))
+    active_investors_fig.update_layout(title="Active Investors Over Time", xaxis_title="Day", yaxis_title="Investors")
+
+    # Investor Ownership Percentages
+    investor_ownership_fig = go.Figure()
+    for col in data.columns:
+        if col.endswith("_pct"):
+            investor_ownership_fig.add_trace(go.Scatter(x=data["day"], y=data[col], mode="lines", name=col.replace("_pct", "")))
+    investor_ownership_fig.update_layout(title="Investor Ownership Percentages", xaxis_title="Day", yaxis_title="Percentage")
+
+    st.plotly_chart(total_investment_fig, use_container_width=True)
+    st.plotly_chart(active_investors_fig, use_container_width=True)
+    st.plotly_chart(investor_ownership_fig, use_container_width=True)
 
 def main():
     st.title("Investment Visualization")
